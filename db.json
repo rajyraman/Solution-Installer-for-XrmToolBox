@@ -1,0 +1,25 @@
+[{
+	"owner" : "a33ik",
+	"repos" : ["UltimateWorkflowToolkit"]
+}, {
+	"owner" : "daryllabar",
+	"repos" : ["XrmAutoNumberGenerator"]
+}, {
+	"owner" : "demianrasko",
+	"repos" : ["Dynamics-365-Workflow-Tools"]
+}, {
+	"owner" : "jlattimer",
+	"repos" : ["CRMCodeEditor", "CRM-Email-Workflow-Utilities", "CRM-DateTime-Workflow-Utilities", "CRM-Note-Workflow-Utilities", "CRM-Numeric-Workflow-Utilities", "CRMRESTBuilder"]
+}, {
+	"owner" : "mscrmtools",
+	"repos" : ["ApplicationParameters"]
+}, {
+	"owner" : "rajyraman",
+	"repos" : ["Personal-View-to-System-View"]
+}, {
+	"owner" : "rtebar",
+	"repos" : ["dynamics-custom-emails"]
+}, {
+	"owner" : "scottdurow",
+	"repos" : ["NetworkView", "RibbonWorkbench"]
+}]
