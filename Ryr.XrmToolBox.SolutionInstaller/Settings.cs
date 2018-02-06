@@ -14,6 +14,6 @@ namespace Ryr.XrmToolBox.SolutionInstaller
     /// </remarks>
     public class Settings
 {
-    public string LastUsedOrganizationWebappUrl { get; set; }
+    public string GitHubKey { get; set; }
 }
 }

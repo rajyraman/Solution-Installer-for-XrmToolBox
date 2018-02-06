@@ -151,9 +151,10 @@
             // 
             this.tstGitHubKey.BackColor = System.Drawing.SystemColors.Window;
             this.tstGitHubKey.Name = "tstGitHubKey";
-            this.tstGitHubKey.Size = new System.Drawing.Size(250, 48);
+            this.tstGitHubKey.Size = new System.Drawing.Size(410, 48);
             this.tstGitHubKey.ToolTipText = "Enter a GitHub API Key, if you have one. Calls might be throttled, if you don\'t h" +
     "ave one.";
+            this.tstGitHubKey.TextChanged += new System.EventHandler(this.tstGitHubKey_TextChanged);
             // 
             // splitContainer1
             // 

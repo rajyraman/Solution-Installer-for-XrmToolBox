@@ -28,18 +28,16 @@ namespace Ryr.XrmToolBox.SolutionInstaller
     public partial class SolutionInstallerPlugin : MultipleConnectionsPluginControlBase, IGitHubPlugin, IPayPalPlugin,
         IHelpPlugin, IStatusBarMessenger
     {
-        private readonly List<KeyValuePair<string, string>> _repos = new List<KeyValuePair<string, string>>
+        private readonly Dictionary<string, List<string>> _authorRepos = new Dictionary<string, List<string>>
         {
-            new KeyValuePair<string, string>("a33ik", "UltimateWorkflowToolkit"),
-            new KeyValuePair<string, string>("demianrasko", "Dynamics-365-Workflow-Tools"),
-            new KeyValuePair<string, string>("jlattimer", "CRMCodeEditor"),
-            new KeyValuePair<string, string>("jlattimer", "CRMRESTBuilder"),
-            new KeyValuePair<string, string>("rajyraman", "Personal-View-to-System-View"),
-            new KeyValuePair<string, string>("rtebar", "dynamics-custom-emails"),
-            new KeyValuePair<string, string>("scottdurow", "RibbonWorkbench"),
-            new KeyValuePair<string, string>("scottdurow", "NetworkView"),
-            new KeyValuePair<string, string>("mscrmtools", "ApplicationParameters"),
-            new KeyValuePair<string, string>("daryllabar", "XrmAutoNumberGenerator"),
+            {"a33ik", new List<string>{"UltimateWorkflowToolkit"}},
+            {"demianrasko", new List<string>{"Dynamics-365-Workflow-Tools"}},
+            {"jlattimer", new List<string>{"CRMCodeEditor", "CRMRESTBuilder"}},
+            {"rajyraman", new List<string>{"Personal-View-to-System-View"}},
+            {"rtebar", new List<string>{"dynamics-custom-emails"}},
+            {"scottdurow", new List<string>{"RibbonWorkbench","NetworkView"}},
+            {"mscrmtools", new List<string>{"ApplicationParameters"}},
+            {"daryllabar", new List<string>{"XrmAutoNumberGenerator"}},
         };
 
         private const string SOLUTION_FETCH = @"
@@ -69,7 +67,11 @@ namespace Ryr.XrmToolBox.SolutionInstaller
             ConnectedOrgs = new List<ConnectionDetail>();
 
             _gitHubClient = new GitHubClient(new ProductHeaderValue("xrmtoolbox-solutions-installer"));
-
+            if (SettingsManager.Instance.TryLoad(typeof(SolutionInstallerPlugin), out Settings settings) &&
+                !string.IsNullOrEmpty(settings.GitHubKey))
+            {
+                tstGitHubKey.Text = settings.GitHubKey;
+            }
             if (!string.IsNullOrEmpty(tstGitHubKey.Text))
             {
                 _gitHubClient.Credentials = new Credentials(tstGitHubKey.Text);
@@ -80,6 +82,10 @@ namespace Ryr.XrmToolBox.SolutionInstaller
 
         private void tsbClose_Click(object sender, EventArgs e)
         {
+            SettingsManager.Instance.Save(typeof(SolutionInstallerPlugin), new Settings
+            {
+                GitHubKey = tstGitHubKey.Text
+            });
             CloseTool();
         }
 
@@ -148,13 +154,13 @@ namespace Ryr.XrmToolBox.SolutionInstaller
 
         private void LoadSolutionsFromGitHub()
         {
-            ShowInfoNotification("Install unmanaged and pre-release solutions with caution", null);
             WorkAsync(new WorkAsyncInfo
             {
                 Message = "Retrieving solutions from GitHub..",
                 Work = (worker, args) =>
                 {
-                    _repos.GroupBy(r => r.Key).ToList().ForEach(r =>
+                    HideNotification();
+                    _authorRepos.ToList().ForEach(r =>
                     {
                         var user = _gitHubClient.User.Get(r.Key).Result;
                         lvGitHubSolutions.AddGroup($"{user.Name} (@{user.Login})", r.Key);
@@ -162,13 +168,21 @@ namespace Ryr.XrmToolBox.SolutionInstaller
 
                     var downloadableAssets = new List<Asset>();
 
-                    foreach (var repo in _repos)
+                    foreach (var authorRepo in _authorRepos)
                     {
-                        worker.ReportProgress(0, $"Retrieving releases for {repo.Value} from GitHub..");
-                        var releases = _gitHubClient.Repository.Release.GetAll(repo.Key, repo.Value).Result
-                            .Take(3)
-                            .OrderByDescending(r => r.CreatedAt.DateTime)
-                            .ToList();
+                        var releases = new List<Release>();
+                        authorRepo.Value.ForEach(x =>
+                        {
+                            worker.ReportProgress(0, $"Retrieving releases for {x} from GitHub..");
+                            releases.AddRange(_gitHubClient.Repository.Release.GetAll(authorRepo.Key, x).Result.Take(3)
+                                .OrderByDescending(r => r.CreatedAt.DateTime).ToList());
+                        });
+                        foreach (var repo in authorRepo.Value)
+                        {
+                            var lastThreeReleases = _gitHubClient.Repository.Release.GetAll(authorRepo.Key, repo).Result.Take(3)
+                                    .OrderByDescending(r => r.CreatedAt.DateTime).ToList();
+                            releases.AddRange(lastThreeReleases);
+                        }
                         foreach (var release in releases)
                         {
                             var latestAssets = (release.Assets
@@ -177,8 +191,8 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                                 .Select(a => new Asset
                                 {
                                     ReleaseUrl = release.HtmlUrl,
-                                    RepoName = repo.Value,
-                                    Author = repo.Key,
+                                    RepoName = release.Name,
+                                    Author = authorRepo.Key,
                                     BrowserDownloadUrl = a.BrowserDownloadUrl,
                                     Label = a.Label,
                                     Name = a.Name,
@@ -194,12 +208,16 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                             downloadableAssets.AddRange(latestAssets);
                         }
                     }
-
-                    ;
                     args.Result = downloadableAssets;
                 },
                 PostWorkCallBack = (args) =>
                 {
+                    if (args.Error?.InnerException is RateLimitExceededException)
+                    {
+                        ShowErrorNotification("Rate Limit reached (max 60 requests per hr). Use your GitHub API key or please try again later.", new Uri("https://developer.github.com/v3/#rate-limiting"));
+                        return;
+                    }
+                    ShowInfoNotification("Install unmanaged and pre-release solutions with caution", null);
                     var downloadableAssets = (List<Asset>) args.Result;
                     lvGitHubSolutions.Items.AddRange(
                         downloadableAssets.Select(asset => new ListViewItem
@@ -261,7 +279,6 @@ namespace Ryr.XrmToolBox.SolutionInstaller
 
         private void SolutionInstallerPlugin_Load(object sender, EventArgs e)
         {
-            ShowInfoNotification("Use your GitHub API key if you start getting throttling errors", null);
             ConnectedOrgs.Add(ConnectionDetail);
             ExecuteMethod(LoadSolutionsInCRM);
         }
@@ -368,6 +385,14 @@ namespace Ryr.XrmToolBox.SolutionInstaller
         {
             var installedSolutionListViewItemTest = ((ListView)sender).HitTest(e.X, e.Y);
             Process.Start(installedSolutionListViewItemTest.Item.Tag.ToString());
+        }
+
+        private void tstGitHubKey_TextChanged(object sender, EventArgs e)
+        {
+            if (!string.IsNullOrEmpty(tstGitHubKey.Text))
+            {
+                _gitHubClient.Credentials = new Credentials(tstGitHubKey.Text);
+            }
         }
     }
 }
