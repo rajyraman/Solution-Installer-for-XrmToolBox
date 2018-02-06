@@ -57,6 +57,9 @@
             this.publisher = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.version = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.installed = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.splitContainer2 = new System.Windows.Forms.SplitContainer();
+            this.label1 = new System.Windows.Forms.Label();
+            this.txtSearch = new System.Windows.Forms.TextBox();
             this.toolStripMenu.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
@@ -64,6 +67,10 @@
             this.splitContainer1.SuspendLayout();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.splitContainer2)).BeginInit();
+            this.splitContainer2.Panel1.SuspendLayout();
+            this.splitContainer2.Panel2.SuspendLayout();
+            this.splitContainer2.SuspendLayout();
             this.SuspendLayout();
             // 
             // toolStripMenu
@@ -177,7 +184,7 @@
             // 
             // groupBox1
             // 
-            this.groupBox1.Controls.Add(this.lvGitHubSolutions);
+            this.groupBox1.Controls.Add(this.splitContainer2);
             this.groupBox1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.groupBox1.Location = new System.Drawing.Point(0, 0);
             this.groupBox1.Margin = new System.Windows.Forms.Padding(8, 7, 8, 7);
@@ -201,11 +208,11 @@
             this.lvGitHubSolutions.Dock = System.Windows.Forms.DockStyle.Fill;
             this.lvGitHubSolutions.FullRowSelect = true;
             this.lvGitHubSolutions.GridLines = true;
-            this.lvGitHubSolutions.Location = new System.Drawing.Point(8, 38);
+            this.lvGitHubSolutions.Location = new System.Drawing.Point(0, 0);
             this.lvGitHubSolutions.Margin = new System.Windows.Forms.Padding(8, 7, 8, 7);
             this.lvGitHubSolutions.Name = "lvGitHubSolutions";
             this.lvGitHubSolutions.ShowItemToolTips = true;
-            this.lvGitHubSolutions.Size = new System.Drawing.Size(1384, 1817);
+            this.lvGitHubSolutions.Size = new System.Drawing.Size(1384, 1763);
             this.lvGitHubSolutions.TabIndex = 0;
             this.lvGitHubSolutions.TileSize = new System.Drawing.Size(250, 50);
             this.lvGitHubSolutions.UseCompatibleStateImageBehavior = false;
@@ -301,6 +308,41 @@
             this.installed.Text = "Installed";
             this.installed.Width = 120;
             // 
+            // splitContainer2
+            // 
+            this.splitContainer2.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.splitContainer2.Location = new System.Drawing.Point(8, 38);
+            this.splitContainer2.Name = "splitContainer2";
+            this.splitContainer2.Orientation = System.Windows.Forms.Orientation.Horizontal;
+            // 
+            // splitContainer2.Panel1
+            // 
+            this.splitContainer2.Panel1.Controls.Add(this.txtSearch);
+            this.splitContainer2.Panel1.Controls.Add(this.label1);
+            // 
+            // splitContainer2.Panel2
+            // 
+            this.splitContainer2.Panel2.Controls.Add(this.lvGitHubSolutions);
+            this.splitContainer2.Size = new System.Drawing.Size(1384, 1817);
+            this.splitContainer2.TabIndex = 1;
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(25, 31);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(105, 32);
+            this.label1.TabIndex = 0;
+            this.label1.Text = "Search";
+            // 
+            // txtSearch
+            // 
+            this.txtSearch.Location = new System.Drawing.Point(136, 25);
+            this.txtSearch.Name = "txtSearch";
+            this.txtSearch.Size = new System.Drawing.Size(747, 38);
+            this.txtSearch.TabIndex = 1;
+            this.txtSearch.KeyUp += new System.Windows.Forms.KeyEventHandler(this.txtSearch_KeyUp);
+            // 
             // SolutionInstallerPlugin
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(16F, 31F);
@@ -319,6 +361,11 @@
             this.splitContainer1.ResumeLayout(false);
             this.groupBox1.ResumeLayout(false);
             this.groupBox2.ResumeLayout(false);
+            this.splitContainer2.Panel1.ResumeLayout(false);
+            this.splitContainer2.Panel1.PerformLayout();
+            this.splitContainer2.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.splitContainer2)).EndInit();
+            this.splitContainer2.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -353,5 +400,8 @@
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
         private System.Windows.Forms.ToolStripLabel toolStripLabel1;
         private System.Windows.Forms.ToolStripTextBox tstGitHubKey;
+        private System.Windows.Forms.SplitContainer splitContainer2;
+        private System.Windows.Forms.TextBox txtSearch;
+        private System.Windows.Forms.Label label1;
     }
 }

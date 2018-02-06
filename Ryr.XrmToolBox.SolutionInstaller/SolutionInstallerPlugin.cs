@@ -79,6 +79,8 @@ namespace Ryr.XrmToolBox.SolutionInstaller
         }
 
         private readonly GitHubClient _gitHubClient;
+        private ListViewItem[] _gitHubSolutions;
+        private List<ListViewGroup> _lvGroups;
 
         private void tsbClose_Click(object sender, EventArgs e)
         {
@@ -165,7 +167,7 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                         var user = _gitHubClient.User.Get(r.Key).Result;
                         lvGitHubSolutions.AddGroup($"{user.Name} (@{user.Login})", r.Key);
                     });
-
+                    _lvGroups = lvGitHubSolutions.Groups.Cast<ListViewGroup>().ToList();
                     var downloadableAssets = new List<Asset>();
 
                     foreach (var authorRepo in _authorRepos)
@@ -219,23 +221,23 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                     }
                     ShowInfoNotification("Install unmanaged and pre-release solutions with caution", null);
                     var downloadableAssets = (List<Asset>) args.Result;
-                    lvGitHubSolutions.Items.AddRange(
-                        downloadableAssets.Select(asset => new ListViewItem
+                    _gitHubSolutions = downloadableAssets.Select(asset => new ListViewItem
+                    {
+                        Text = asset.RepoName,
+                        SubItems =
                         {
-                            Text = asset.RepoName,
-                            SubItems =
-                            {
-                                asset.Name,
-                                asset.AssetPublishedAt,
-                                asset.IsPreRelease.ToYesNo(),
-                                asset.AssetTag,
-                                asset.DownloadCount.ToString()
-                            },
-                            ToolTipText = asset.AssetBody,
-                            Tag = asset,
-                            ForeColor = asset.IsPreRelease ? Color.PaleVioletRed : Color.Black,
-                            Group = lvGitHubSolutions.Groups[asset.Author]
-                        }).ToArray());
+                            asset.Name,
+                            asset.AssetPublishedAt,
+                            asset.IsPreRelease.ToYesNo(),
+                            asset.AssetTag,
+                            asset.DownloadCount.ToString()
+                        },
+                        ToolTipText = asset.AssetBody,
+                        Tag = asset,
+                        ForeColor = asset.IsPreRelease ? Color.PaleVioletRed : Color.Black,
+                        Group = lvGitHubSolutions.Groups[asset.Author]
+                    }).ToArray();
+                    lvGitHubSolutions.Items.AddRange(_gitHubSolutions);
                     lvGitHubSolutions.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
                 },
                 ProgressChanged = e => { SetWorkingMessage(e.UserState.ToString()); }
@@ -393,6 +395,55 @@ namespace Ryr.XrmToolBox.SolutionInstaller
             {
                 _gitHubClient.Credentials = new Credentials(tstGitHubKey.Text);
             }
+        }
+
+        private void txtSearch_KeyUp(object sender, KeyEventArgs e)
+        {
+            ListViewItem[] AddMissingGroups()
+            {
+                return _gitHubSolutions.Select(x =>
+                {
+                    var asset = x.Tag as Asset;
+                    if (x.Group == null)
+                    {
+                        x.Group = _lvGroups.FirstOrDefault(g => g.Name == asset.Author);
+                    }
+
+                    return x;
+                })
+                .ToArray();
+            }
+            var repoOrAuthorName = txtSearch.Text;
+            lvGitHubSolutions.BeginUpdate();
+            lvGitHubSolutions.Items.Clear();
+            lvGitHubSolutions.Groups.AddRange(_lvGroups.ToArray());
+            if (string.IsNullOrWhiteSpace(repoOrAuthorName))
+            {
+                lvGitHubSolutions.Items.AddRange(AddMissingGroups());
+            }
+            else
+            {
+                var filteredItems = _gitHubSolutions
+                    .Where(item =>
+                    {
+                        var asset = item.Tag as Asset;
+                        return asset.Author.IndexOf(repoOrAuthorName, StringComparison.CurrentCultureIgnoreCase) > -1
+                               || asset.AssetName.IndexOf(repoOrAuthorName, StringComparison.CurrentCultureIgnoreCase) > -1
+                               || asset.RepoName.IndexOf(repoOrAuthorName, StringComparison.CurrentCultureIgnoreCase) > -1
+                               || asset.Name.IndexOf(repoOrAuthorName, StringComparison.CurrentCultureIgnoreCase) > -1;
+                    }).Select(x =>
+                    {
+                        var asset = x.Tag as Asset;
+                        if (x.Group == null)
+                        {
+                            x.Group = _lvGroups.FirstOrDefault(g=>g.Name == asset.Author);
+                        }
+                        return x;
+                    })
+                    .ToArray();
+                lvGitHubSolutions.Items.AddRange(filteredItems);
+            }
+            lvGitHubSolutions.EndUpdate();
         }
     }
 }
