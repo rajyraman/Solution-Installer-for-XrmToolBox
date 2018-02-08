@@ -88,6 +88,8 @@ namespace Ryr.XrmToolBox.SolutionInstaller
         {
             lvGitHubSolutions.Groups.Clear();
             lvGitHubSolutions.Items.Clear();
+            SendMessageToStatusBar?.Invoke(this, new StatusBarMessageEventArgs(""));
+            txtSearch.Text = "";
 
             ExecuteMethod(LoadSolutionsFromGitHub);
         }
@@ -105,7 +107,7 @@ namespace Ryr.XrmToolBox.SolutionInstaller
 
             WorkAsync(new WorkAsyncInfo
             {
-                Message = "Retrieving managed solutions already installed..",
+                Message = "Retrieving solutions already installed..",
                 Work = (worker, args) =>
                 {
                     var orgsAndSolutions = new Dictionary<ConnectionDetail, List<Entity>>();
@@ -230,11 +232,11 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                         Text = asset.RepoName,
                         SubItems =
                         {
+                            asset.DownloadCount.ToString(),
                             asset.Name,
                             asset.AssetPublishedAt,
                             asset.IsPreRelease.ToYesNo(),
-                            asset.AssetTag,
-                            asset.DownloadCount.ToString()
+                            asset.AssetTag
                         },
                         ToolTipText = asset.AssetBody,
                         Tag = asset,
@@ -275,7 +277,7 @@ namespace Ryr.XrmToolBox.SolutionInstaller
         public string UserName => "rajyraman";
         public string DonationDescription => "Please sponsor my coffee, if you find this tool useful. Thank you.";
         public string EmailAccount => "natraj.y@gmail.com";
-        public string HelpUrl => "https://github.com/rajyraman/Solution-Installer-for-XrmToolBox/README.md";
+        public string HelpUrl => "https://github.com/rajyraman/Solution-Installer-for-XrmToolBox/blob/master/README.md";
 
         public event EventHandler<StatusBarMessageEventArgs> SendMessageToStatusBar;
 
@@ -300,7 +302,7 @@ namespace Ryr.XrmToolBox.SolutionInstaller
         {
             var solutions = lvGitHubSolutions.CheckedItems
                 .Cast<ListViewItem>()
-                .Select(x=> x.SubItems[1].Text)
+                .Select(x=> x.SubItems[2].Text)
                 .ToArray();
 
             var connections = ConnectedOrgs
@@ -319,16 +321,18 @@ namespace Ryr.XrmToolBox.SolutionInstaller
         private void PublishSolutions()
         {
             var importErrors = new Dictionary<string, string>();
-
+            var watch = new Stopwatch();
+            var selectedSolutions = lvGitHubSolutions.GetCheckedItems();
             WorkAsync(new WorkAsyncInfo
             {
                 Message = "Downloading solution files from GitHub..",
                 IsCancelable = true,
                 Work = (worker, args) =>
                 {
+                    watch.Start();
                     using (var webClient = new WebClient())
                     {
-                        var solutions = lvGitHubSolutions.GetCheckedItems()
+                        var solutionFiles = selectedSolutions
                             .Select(x =>
                             {
                                 var asset = (Asset) x.Tag;
@@ -339,10 +343,10 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                             .ToList();
                         foreach (var connectedOrg in ConnectedOrgs)
                         {
-                            foreach (var s in solutions)
+                            foreach (var s in solutionFiles)
                             {
                                 worker.ReportProgress(0,
-                                    $"Importing {s.Key} to {connectedOrg.ConnectionName}..");
+                                    $"Importing {s.Key} into {connectedOrg.ConnectionName}..");
                                 try
                                 {
                                     connectedOrg.ServiceClient.Execute(
@@ -355,20 +359,30 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                                 catch (FaultException<OrganizationServiceFault> ex)
                                 {
                                     importErrors.Add($"{s.Key}:{connectedOrg.ConnectionName}",
-                                        $"Org {connectedOrg.ConnectionName}, Solution {s.Key}. {ex.Message}");
+                                        $"Org {connectedOrg.ConnectionName}, Solution {s.Key}. " +
+                                        $@"{ex?.Detail?.InnerFault?.InnerFault?.Message 
+                                               ?? ex?.Detail?.InnerFault?.Message 
+                                               ?? ex?.Detail?.Message 
+                                               ?? ex?.Message}");
                                 }
                             }
                         }
 
-                        args.Result = solutions;
+                        args.Result = solutionFiles;
                     }
                 },
                 PostWorkCallBack = (args) =>
                 {
+                    watch.Stop();
                     if (importErrors.Any())
                     {
                         ShowErrorNotification(string.Join(Environment.NewLine, importErrors.Select(x=>x.Value).ToList()), null);
                         importErrors.Clear();
+                    }
+                    else
+                    {
+                        HideNotification();
+                        SendMessageToStatusBar?.Invoke(this, new StatusBarMessageEventArgs($"Imported {selectedSolutions.Length} solutions in {watch.Elapsed.Minutes:00}:{watch.Elapsed.Seconds:00}"));
                     }
                     ExecuteMethod(LoadSolutionsInCRM);
                 },

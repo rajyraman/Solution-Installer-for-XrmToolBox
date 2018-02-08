@@ -39,6 +39,7 @@
             this.label1 = new System.Windows.Forms.Label();
             this.lbConnections = new System.Windows.Forms.ListBox();
             this.label2 = new System.Windows.Forms.Label();
+            this.lblWarning = new System.Windows.Forms.Label();
             this.groupBox1.SuspendLayout();
             this.flowLayoutPanel1.SuspendLayout();
             this.SuspendLayout();
@@ -57,6 +58,7 @@
             // 
             // flowLayoutPanel1
             // 
+            this.flowLayoutPanel1.Controls.Add(this.lblWarning);
             this.flowLayoutPanel1.Controls.Add(this.label1);
             this.flowLayoutPanel1.Controls.Add(this.lbConnections);
             this.flowLayoutPanel1.Controls.Add(this.label2);
@@ -74,7 +76,7 @@
             // 
             this.label3.AutoSize = true;
             this.label3.Dock = System.Windows.Forms.DockStyle.Left;
-            this.label3.Location = new System.Drawing.Point(3, 374);
+            this.label3.Location = new System.Drawing.Point(3, 415);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(192, 38);
             this.label3.TabIndex = 2;
@@ -82,10 +84,10 @@
             // 
             // txtReleaseNotes
             // 
-            this.txtReleaseNotes.Location = new System.Drawing.Point(3, 415);
+            this.txtReleaseNotes.Location = new System.Drawing.Point(3, 456);
             this.txtReleaseNotes.Name = "txtReleaseNotes";
             this.txtReleaseNotes.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.Vertical;
-            this.txtReleaseNotes.Size = new System.Drawing.Size(1616, 618);
+            this.txtReleaseNotes.Size = new System.Drawing.Size(1618, 584);
             this.txtReleaseNotes.TabIndex = 3;
             this.txtReleaseNotes.Text = "";
             // 
@@ -123,7 +125,7 @@
             this.lbSolutions.Font = new System.Drawing.Font("Segoe UI", 8.1F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lbSolutions.FormattingEnabled = true;
             this.lbSolutions.ItemHeight = 37;
-            this.lbSolutions.Location = new System.Drawing.Point(3, 182);
+            this.lbSolutions.Location = new System.Drawing.Point(3, 223);
             this.lbSolutions.Name = "lbSolutions";
             this.lbSolutions.Size = new System.Drawing.Size(857, 189);
             this.lbSolutions.TabIndex = 5;
@@ -132,7 +134,7 @@
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(3, 0);
+            this.label1.Location = new System.Drawing.Point(3, 41);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(170, 38);
             this.label1.TabIndex = 2;
@@ -143,7 +145,7 @@
             this.lbConnections.Enabled = false;
             this.lbConnections.FormattingEnabled = true;
             this.lbConnections.ItemHeight = 37;
-            this.lbConnections.Location = new System.Drawing.Point(3, 41);
+            this.lbConnections.Location = new System.Drawing.Point(3, 82);
             this.lbConnections.Name = "lbConnections";
             this.lbConnections.Size = new System.Drawing.Size(857, 78);
             this.lbConnections.TabIndex = 6;
@@ -151,11 +153,22 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(3, 141);
+            this.label2.Location = new System.Drawing.Point(3, 182);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(131, 38);
             this.label2.TabIndex = 7;
             this.label2.Text = "Solutions";
+            // 
+            // lblWarning
+            // 
+            this.lblWarning.AutoSize = true;
+            this.lblWarning.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblWarning.ForeColor = System.Drawing.Color.Tomato;
+            this.lblWarning.Location = new System.Drawing.Point(3, 0);
+            this.lblWarning.Name = "lblWarning";
+            this.lblWarning.Size = new System.Drawing.Size(728, 41);
+            this.lblWarning.TabIndex = 8;
+            this.lblWarning.Text = "Install unmanaged/pre-release solutions with caution.";
             // 
             // InstallSolution
             // 
@@ -193,5 +206,6 @@
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.ListBox lbConnections;
         private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.Label lblWarning;
     }
 }

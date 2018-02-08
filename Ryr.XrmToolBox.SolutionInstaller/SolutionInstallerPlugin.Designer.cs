@@ -226,11 +226,11 @@
             this.lvGitHubSolutions.CheckBoxes = true;
             this.lvGitHubSolutions.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
             this.isSolutionSelected,
+            this.downloadCount,
             this.solution,
             this.releaseDate,
             this.isPreRelease,
-            this.tag,
-            this.downloadCount});
+            this.tag});
             this.lvGitHubSolutions.Dock = System.Windows.Forms.DockStyle.Fill;
             this.lvGitHubSolutions.FullRowSelect = true;
             this.lvGitHubSolutions.GridLines = true;
