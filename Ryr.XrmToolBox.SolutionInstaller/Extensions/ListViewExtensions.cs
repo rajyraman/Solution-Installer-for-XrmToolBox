@@ -29,6 +29,26 @@ namespace Ryr.XrmToolBox.SolutionInstaller.Extensions
                 MiAddGroup();
             }
         }
+        public static List<ListViewGroup> GetGroups(this ListView listview)
+        {
+            List<ListViewGroup> groups = null;
+            void MiGetGroups()
+            {
+                groups = listview.Groups.Cast<ListViewGroup>().ToList();
+            }
+
+            if (listview.InvokeRequired)
+            {
+                listview.Invoke((MethodInvoker)MiGetGroups);
+            }
+            else
+            {
+                MiGetGroups();
+            }
+
+            return groups;
+        }
+
         public static ListViewItem[] GetCheckedItems(this ListView listview)
         {
             ListViewItem[] checkedItems = null;
@@ -47,6 +67,59 @@ namespace Ryr.XrmToolBox.SolutionInstaller.Extensions
             return checkedItems;
         }
 
+        public static ListViewItem[] GetItems(this ListView listview)
+        {
+            ListViewItem[] items = null;
+            void MiGetItems()
+            {
+                items = listview.Items.Cast<ListViewItem>().ToArray();
+            }
+            if (listview.InvokeRequired)
+            {
+                listview.Invoke((MethodInvoker)MiGetItems);
+            }
+            else
+            {
+                MiGetItems();
+            }
+            return items;
+        }
+
+        public static void ClearCheckedItems(this ListView listview)
+        {
+            void MiUncheckItems()
+            {
+                listview.CheckedItems
+                    .Cast<ListViewItem>()
+                    .Where(x=>x.Checked)
+                    .ToList()
+                    .ForEach(x => x.Checked = false);
+            }
+            if (listview.InvokeRequired)
+            {
+                listview.Invoke((MethodInvoker)MiUncheckItems);
+            }
+            else
+            {
+                MiUncheckItems();
+            }
+        }
+
+        public static void ClearItems(this ListView listview)
+        {
+            void MiItems()
+            {
+                listview.Items.Clear();
+            }
+            if (listview.InvokeRequired)
+            {
+                listview.Invoke((MethodInvoker)MiItems);
+            }
+            else
+            {
+                MiItems();
+            }
+        }
         public static void Sort(this ListView listview, int columnClickedIndex)
         {
             listview.SelectedItems.Clear();

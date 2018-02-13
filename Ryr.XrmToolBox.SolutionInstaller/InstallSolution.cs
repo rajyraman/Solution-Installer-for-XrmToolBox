@@ -12,19 +12,19 @@ namespace Ryr.XrmToolBox.SolutionInstaller
 {
     public partial class InstallSolution : Form
     {
-        private List<Asset> _assets;
+        private readonly List<Asset> _assets;
 
         public InstallSolution()
         {
             InitializeComponent();
         }
 
-        public InstallSolution(string[] solutions, string[] connections, List<Asset> assets)
+        public InstallSolution(string[] connections, List<Asset> assets)
         {
             InitializeComponent();
 
             this._assets = assets;
-            lbSolutions.Items.AddRange(solutions);
+            lbSolutions.Items.AddRange(assets.Select(x=>x.Name).ToArray());
             lbSolutions.SelectedIndex = 0;
             lbConnections.Items.AddRange(connections);
             messageLabel.Text = $@"Organizations to install: {connections}";

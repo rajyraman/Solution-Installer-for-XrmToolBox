@@ -72,8 +72,9 @@ namespace Ryr.XrmToolBox.SolutionInstaller
         }
 
         private readonly GitHubClient _gitHubClient;
-        private ListViewItem[] _gitHubSolutions;
+        private ListViewItem[] _repos;
         private List<ListViewGroup> _lvGroups;
+        private ListViewItem[] _releases;
 
         private void tsbClose_Click(object sender, EventArgs e)
         {
@@ -97,7 +98,8 @@ namespace Ryr.XrmToolBox.SolutionInstaller
         private void EnableItems()
         {
             gbGitHubSolutions.Enabled = true;
-            tsbInstallSolution.Enabled = true;
+            gbReleases.Enabled = lvGitHubSolutions.CheckedItems.Count > 0;
+            tsbInstallSolution.Enabled = lvReleases.CheckedItems.Count > 0;
         }
 
         private void LoadSolutionsInCRM()
@@ -122,6 +124,11 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                 },
                 PostWorkCallBack = (args) =>
                 {
+                    if (args.Error != null)
+                    {
+                        ShowErrorNotification(args.Error.Message, null);
+                        return;
+                    }
                     var orgsAndSolutions = (Dictionary<ConnectionDetail, List<Entity>>) args.Result;
                     lvInstalledSolutions.Groups.AddRange(
                         orgsAndSolutions
@@ -172,50 +179,21 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                     _ownerRepos.ToList().ForEach(r =>
                     {
                         var user = _gitHubClient.User.Get(r.Owner).Result;
-                        lvGitHubSolutions.AddGroup($"{user.Name} (@{user.Login})", r.Owner);
+                        lvGitHubSolutions.AddGroup($"{user.Name} (@{user.Login})", user.Login);
                     });
                     _lvGroups = lvGitHubSolutions.Groups.Cast<ListViewGroup>().ToList();
-                    var downloadableAssets = new List<Asset>();
 
+                    var repos = new List<Repository>();
                     foreach (var ownerRepo in _ownerRepos)
-                    {
-                        var releases = new List<Release>();
-                        foreach (var repo in ownerRepo.Repos)
+                    {   
+                        foreach (var r in ownerRepo.Repos)
                         {
-                            worker.ReportProgress(0, $"Retrieving releases for {repo} from GitHub..");
-                            var allReleases = _gitHubClient.Repository.Release.GetAll(ownerRepo.Owner, repo).Result;
-                            var lastThreeReleases = allReleases
-                                                    .Take(3)
-                                                    .OrderByDescending(r => r.CreatedAt.DateTime)
-                                                    .ToList();
-                            releases.AddRange(lastThreeReleases);
-                        }
-                        foreach (var release in releases)
-                        {
-                            var latestAssets = (release.Assets
-                                .Where(a => a.ContentType == "application/x-zip-compressed" ||
-                                            a.ContentType == "application/zip")
-                                .Select(a => new Asset
-                                {
-                                    ReleaseUrl = release.HtmlUrl,
-                                    RepoName = release.Name,
-                                    Owner = ownerRepo.Owner,
-                                    BrowserDownloadUrl = a.BrowserDownloadUrl,
-                                    Label = a.Label,
-                                    Name = a.Name,
-                                    Size = a.Size,
-                                    UpdatedAt = a.UpdatedAt.DateTime.ToLocalTime().ToString("d"),
-                                    IsPreRelease = release.Prerelease,
-                                    AssetName = release.Name,
-                                    AssetBody = release.Body,
-                                    AssetTag = release.TagName,
-                                    AssetPublishedAt = release.PublishedAt.Value.DateTime.ToLocalTime().ToString("d"),
-                                    DownloadCount = a.DownloadCount
-                                })).ToList();
-                            downloadableAssets.AddRange(latestAssets);
+                            worker.ReportProgress(0, $"Retrieving information for {r} from GitHub..");
+                            var repo = _gitHubClient.Repository.Get(ownerRepo.Owner, r).Result;
+                            repos.Add(repo);
                         }
                     }
-                    args.Result = downloadableAssets;
+                    args.Result = repos;
                 },
                 PostWorkCallBack = (args) =>
                 {
@@ -224,27 +202,27 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                         ShowErrorNotification($"Rate Limit reached. Maximum number of requests per hour is {rateLimitException.Limit}. Please use your GitHub API key or try again after {rateLimitException.Reset.DateTime.ToLocalTime():t}.", new Uri("https://developer.github.com/v3/#rate-limiting"));
                         return;
                     }
-                    EnableItems();
-                    ShowInfoNotification("Install unmanaged and pre-release solutions with caution", null);
-                    var downloadableAssets = (List<Asset>) args.Result;
-                    _gitHubSolutions = downloadableAssets.Select(asset => new ListViewItem
+                    else if (args.Error != null)
                     {
-                        Text = asset.RepoName,
+                        ShowErrorNotification(args.Error.Message, null);
+                        return;
+                    }
+                    EnableItems();
+                    var repos = (List<Repository>) args.Result;
+                    _repos = repos.Select(r => new ListViewItem
+                    {
+                        Text = r.Name,
                         SubItems =
                         {
-                            asset.DownloadCount.ToString(),
-                            asset.Name,
-                            asset.AssetPublishedAt,
-                            asset.IsPreRelease.ToYesNo(),
-                            asset.AssetTag
+                            r.StargazersCount.ToString(),
+                            r.Description
                         },
-                        ToolTipText = asset.AssetBody,
-                        Tag = asset,
-                        ForeColor = asset.IsPreRelease ? Color.PaleVioletRed : Color.Black,
-                        Group = lvGitHubSolutions.Groups[asset.Owner]
+                        ToolTipText = r.Description,
+                        Tag = r,
+                        Group = lvGitHubSolutions.Groups[r.Owner.Login]
                     }).ToArray();
-                    lvGitHubSolutions.Items.AddRange(_gitHubSolutions);
-                    lvGitHubSolutions.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
+                    lvGitHubSolutions.Items.AddRange(_repos);
+                    //lvGitHubSolutions.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
                 },
                 ProgressChanged = e => SetWorkingMessage(e.UserState.ToString())
             });
@@ -295,24 +273,20 @@ namespace Ryr.XrmToolBox.SolutionInstaller
         private void lvGitHubSolutions_MouseDoubleClick(object sender, MouseEventArgs e)
         {
             var solutionListViewItemTest = ((ListView) sender).HitTest(e.X, e.Y);
-            Process.Start(((Asset)solutionListViewItemTest.Item.Tag).ReleaseUrl);
+            Process.Start(((Repository)solutionListViewItemTest.Item.Tag).HtmlUrl);
         }
 
         private void tsbInstallSolution_Click(object sender, EventArgs e)
         {
-            var solutions = lvGitHubSolutions.CheckedItems
-                .Cast<ListViewItem>()
-                .Select(x=> x.SubItems[2].Text)
-                .ToArray();
-
             var connections = ConnectedOrgs
                 .Select(x => x.ConnectionName).ToArray();
 
-            var releaseNotes = lvGitHubSolutions.CheckedItems
+            var assets = lvReleases.CheckedItems
                 .Cast<ListViewItem>()
                 .Select(x => (Asset)x.Tag).ToList();
+
             if (DialogResult.OK == 
-                new InstallSolution(solutions, connections, releaseNotes).ShowDialog(this))
+                new InstallSolution(connections, assets).ShowDialog(this))
             {
                 ExecuteMethod(PublishSolutions);
             }
@@ -322,7 +296,7 @@ namespace Ryr.XrmToolBox.SolutionInstaller
         {
             var importErrors = new Dictionary<string, string>();
             var watch = new Stopwatch();
-            var selectedSolutions = lvGitHubSolutions.GetCheckedItems();
+            var selectedSolutions = lvReleases.GetCheckedItems();
             WorkAsync(new WorkAsyncInfo
             {
                 Message = "Downloading solution files from GitHub..",
@@ -374,7 +348,12 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                 PostWorkCallBack = (args) =>
                 {
                     watch.Stop();
-                    if (importErrors.Any())
+                    if (args.Error != null)
+                    {
+                        ShowErrorNotification(args.Error.Message, null);
+                        return;
+                    }
+                    else if (importErrors.Any())
                     {
                         ShowErrorNotification(string.Join(Environment.NewLine, importErrors.Select(x=>x.Value).ToList()), null);
                         importErrors.Clear();
@@ -408,12 +387,12 @@ namespace Ryr.XrmToolBox.SolutionInstaller
         {
             ListViewItem[] AddMissingGroups()
             {
-                return _gitHubSolutions.Select(x =>
+                return _repos.Select(x =>
                 {
-                    var asset = x.Tag as Asset;
+                    var asset = x.Tag as Repository;
                     if (x.Group == null)
                     {
-                        x.Group = _lvGroups.FirstOrDefault(g => g.Name == asset.Owner);
+                        x.Group = _lvGroups.FirstOrDefault(g => g.Name == asset.Owner.Login);
                     }
 
                     return x;
@@ -430,24 +409,22 @@ namespace Ryr.XrmToolBox.SolutionInstaller
             }
             else
             {
-                var filteredItems = _gitHubSolutions
-                    .Where(item =>
+                var filteredItems = _repos
+                .Where(item =>
+                {
+                    var repository = item.Tag as Repository;
+                    return repository.Owner.Login.IndexOf(repoOrOwnerName, StringComparison.CurrentCultureIgnoreCase) > -1
+                            || repository.Name.IndexOf(repoOrOwnerName, StringComparison.CurrentCultureIgnoreCase) > -1;
+                }).Select(x =>
+                {
+                    var repository = x.Tag as Repository;
+                    if (x.Group == null)
                     {
-                        var asset = item.Tag as Asset;
-                        return asset.Owner.IndexOf(repoOrOwnerName, StringComparison.CurrentCultureIgnoreCase) > -1
-                               || asset.AssetName.IndexOf(repoOrOwnerName, StringComparison.CurrentCultureIgnoreCase) > -1
-                               || asset.RepoName.IndexOf(repoOrOwnerName, StringComparison.CurrentCultureIgnoreCase) > -1
-                               || asset.Name.IndexOf(repoOrOwnerName, StringComparison.CurrentCultureIgnoreCase) > -1;
-                    }).Select(x =>
-                    {
-                        var asset = x.Tag as Asset;
-                        if (x.Group == null)
-                        {
-                            x.Group = _lvGroups.FirstOrDefault(g=>g.Name == asset.Owner);
-                        }
-                        return x;
-                    })
-                    .ToArray();
+                        x.Group = _lvGroups.FirstOrDefault(g=>g.Name == repository.Owner.Login);
+                    }
+                    return x;
+                })
+                .ToArray();
                 lvGitHubSolutions.Items.AddRange(filteredItems);
             }
             lvGitHubSolutions.EndUpdate();
@@ -468,9 +445,119 @@ namespace Ryr.XrmToolBox.SolutionInstaller
 
         public event EventHandler<MessageBusEventArgs> OnOutgoingMessage;
 
-        private void lvGitHubSolutions_ItemChecked(object sender, ItemCheckedEventArgs e)
+        private void lvGitHubSolutions_ItemChecked(object sender, ItemCheckedEventArgs icea)
         {
-            tsbInstallSolution.Enabled = lvGitHubSolutions.CheckedItems.Count > 0;
+            var lvGitHubSolutionsChecked = lvGitHubSolutions.GetCheckedItems();
+            var lvReleasesItems = lvReleases.GetItems();
+            scSolutionsAndFiles.Panel2Collapsed = lvGitHubSolutionsChecked.Length == 0;
+            if (lvGitHubSolutionsChecked.Length == 0 && lvReleasesItems.Length == 0) return;
+
+            WorkAsync(new WorkAsyncInfo
+            {
+                Message = $"Retrieving releases from GitHub..",
+                Work = (worker, args) =>
+                {
+                    HideNotification();
+                    var downloadableAssets = new List<Asset>();
+                    var solutions = (from s in lvGitHubSolutionsChecked
+                                     let lvGitHubSolutionsTag = (Repository)s.Tag
+                                     join r in lvReleasesItems on s.Text equals ((Asset)r.Tag).RepoName into sr
+                                     from s2 in sr.DefaultIfEmpty()
+                                     where s2 == null
+                                     select (Repository)s.Tag).ToList();
+                    solutions.ForEach(r =>
+                    {
+                        if (lvReleases.GetGroups().Any(g => g.Name == r.Name)) return;
+
+                        lvReleases.AddGroup(r.Name, r.Name);
+                    });
+                    _lvGroups = lvGitHubSolutions.GetGroups();
+                    foreach (var repo in solutions)
+                    {
+                        var releases = new List<Release>();
+                        worker.ReportProgress(0, $"Retrieving releases for {repo} from GitHub..");
+                        var allReleases = _gitHubClient.Repository.Release.GetAll(repo.Owner.Login, repo.Name).Result;
+                        var lastThreeReleases = allReleases
+                                                .Take(3)
+                                                .OrderByDescending(r => r.CreatedAt.DateTime)
+                                                .ToList();
+                        releases.AddRange(lastThreeReleases);
+                        foreach (var release in releases)
+                        {
+                            var latestAssets = (release.Assets
+                                .Where(a => a.ContentType == "application/x-zip-compressed" ||
+                                            a.ContentType == "application/zip")
+                                .Select(a => new Asset
+                                {
+                                    ReleaseUrl = release.HtmlUrl,
+                                    RepoName = repo.Name,
+                                    Owner = repo.Owner.Login,
+                                    BrowserDownloadUrl = a.BrowserDownloadUrl,
+                                    Label = a.Label,
+                                    Name = a.Name,
+                                    Size = a.Size,
+                                    UpdatedAt = a.UpdatedAt.DateTime.ToLocalTime().ToString("d"),
+                                    IsPreRelease = release.Prerelease,
+                                    AssetName = release.Name,
+                                    AssetBody = release.Body,
+                                    AssetTag = release.TagName,
+                                    AssetPublishedAt = release.PublishedAt.Value.DateTime.ToLocalTime().ToString("d"),
+                                    DownloadCount = a.DownloadCount
+                                })).ToList();
+                            downloadableAssets.AddRange(latestAssets);
+                        }
+                    }
+                    args.Result = downloadableAssets;
+                },
+                PostWorkCallBack = (args) =>
+                {
+                    if (args.Error?.InnerException is RateLimitExceededException rateLimitException)
+                    {
+                        ShowErrorNotification($"Rate Limit reached. Maximum number of requests per hour is {rateLimitException.Limit}. Please use your GitHub API key or try again after {rateLimitException.Reset.DateTime.ToLocalTime():t}.", new Uri("https://developer.github.com/v3/#rate-limiting"));
+                        tslGitHubKey.Visible = true;
+                        tstGitHubKey.Visible = true;
+                        return;
+                    }
+                    EnableItems();
+                    ShowInfoNotification("Install unmanaged and pre-release solutions with caution", null);
+                    var downloadableAssets = (List<Asset>)args.Result;
+                    _releases = downloadableAssets.Select(asset => new ListViewItem
+                    {
+                        Text = asset.Name,
+                        SubItems =
+                        {
+                            asset.DownloadCount.ToString(),
+                            asset.AssetPublishedAt,
+                            asset.IsPreRelease.ToYesNo(),
+                            asset.AssetTag
+                        },
+                        ToolTipText = asset.AssetBody,
+                        Tag = asset,
+                        ForeColor = asset.IsPreRelease ? Color.PaleVioletRed : Color.Black,
+                        Group = lvReleases.Groups[asset.RepoName]
+                    }).ToArray();
+                    lvReleases.Items.AddRange(_releases);
+                    lvReleases.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
+                },
+                ProgressChanged = e => SetWorkingMessage(e.UserState.ToString())
+            });
+        }
+
+        private void lvReleases_ItemChecked(object sender, ItemCheckedEventArgs e)
+        {
+            tsbInstallSolution.Enabled = lvReleases.CheckedItems.Count > 0;
+        }
+
+        private void lvReleases_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            var solutionListViewItemTest = ((ListView)sender).HitTest(e.X, e.Y);
+            Process.Start(((Asset)solutionListViewItemTest.Item.Tag).BrowserDownloadUrl);
+        }
+
+        private void tsbReset_Click(object sender, EventArgs e)
+        {
+            lvGitHubSolutions.ClearCheckedItems();
+            lvReleases.ClearItems();
         }
     }
 }
