@@ -19,8 +19,11 @@ using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using Octokit;
 using Ryr.XrmToolBox.SolutionInstaller.DefinitionClasses;
+using Ryr.XrmToolBox.SolutionInstaller.DockPanels;
 using Ryr.XrmToolBox.SolutionInstaller.Extensions;
 using Ryr.XrmToolBox.SolutionInstaller.Properties;
+using Ryr.XrmToolBox.SolutionInstaller.Utility;
+using WeifenLuo.WinFormsUI.Docking;
 using XrmToolBox.Extensibility;
 using XrmToolBox.Extensibility.Args;
 using XrmToolBox.Extensibility.Interfaces;
@@ -56,6 +59,17 @@ namespace Ryr.XrmToolBox.SolutionInstaller
         public SolutionInstallerPlugin()
         {
             InitializeComponent();
+            var dockMessager = new DockMessager(this);
+            this.mainDockPanel.Theme = new VS2015BlueTheme();
+            _solutionsDock = new GitHubSolutionsDockContent(dockMessager);
+            _solutionsDock.Show(this.mainDockPanel, DockState.DockLeft);
+
+            _releasesDock = new GitHubReleasesDockContent(dockMessager);
+            _releasesDock.Show(this.mainDockPanel, DockState.Document);
+
+            _installedSolutionsDock = new InstalledSolutionsDockContent(dockMessager);
+            _installedSolutionsDock.Show(this.mainDockPanel, DockState.Document);
+
             TabIcon = Resources.Logo;
             ConnectedOrgs = new List<ConnectionDetail>();
 
@@ -65,6 +79,7 @@ namespace Ryr.XrmToolBox.SolutionInstaller
             {
                 tstGitHubKey.Text = settings.GitHubKey;
             }
+
             if (!string.IsNullOrEmpty(tstGitHubKey.Text))
             {
                 _gitHubClient.Credentials = new Credentials(tstGitHubKey.Text);
@@ -72,9 +87,12 @@ namespace Ryr.XrmToolBox.SolutionInstaller
         }
 
         private readonly GitHubClient _gitHubClient;
-        private ListViewItem[] _repos;
-        private List<ListViewGroup> _lvGroups;
+        public ListViewItem[] Repos { get; set; }
+        public List<ListViewGroup> RepoAuthorGroup { get; set; }
         private ListViewItem[] _releases;
+        private GitHubSolutionsDockContent _solutionsDock;
+        private GitHubReleasesDockContent _releasesDock;
+        private InstalledSolutionsDockContent _installedSolutionsDock;
 
         private void tsbClose_Click(object sender, EventArgs e)
         {
@@ -87,25 +105,25 @@ namespace Ryr.XrmToolBox.SolutionInstaller
 
         private void tsbRetrieveSolutions_Click(object sender, EventArgs e)
         {
-            lvGitHubSolutions.Groups.Clear();
-            lvGitHubSolutions.Items.Clear();
+            _solutionsDock.LvGitHubSolutions.Groups.Clear();
+            _solutionsDock.LvGitHubSolutions.Items.Clear();
             SendMessageToStatusBar?.Invoke(this, new StatusBarMessageEventArgs(""));
-            txtSearch.Text = "";
+            _solutionsDock.TxtSearch.Text = "";
 
             ExecuteMethod(LoadSolutionsFromGitHub);
         }
 
         private void EnableItems()
         {
-            gbGitHubSolutions.Enabled = true;
-            gbReleases.Enabled = lvGitHubSolutions.CheckedItems.Count > 0;
-            tsbInstallSolution.Enabled = lvReleases.CheckedItems.Count > 0;
+            _solutionsDock.Enabled = true;
+            _releasesDock.Enabled = _solutionsDock.LvGitHubSolutions.CheckedItems.Count > 0;
+            tsbInstallSolution.Enabled = _releasesDock.LvReleases.CheckedItems.Count > 0;
         }
 
         private void LoadSolutionsInCRM()
         {
-            lvInstalledSolutions.Groups.Clear();
-            lvInstalledSolutions.Items.Clear();
+            _installedSolutionsDock.LvInstalledSolutions.Groups.Clear();
+            _installedSolutionsDock.LvInstalledSolutions.Items.Clear();
 
             WorkAsync(new WorkAsyncInfo
             {
@@ -130,7 +148,7 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                         return;
                     }
                     var orgsAndSolutions = (Dictionary<ConnectionDetail, List<Entity>>) args.Result;
-                    lvInstalledSolutions.Groups.AddRange(
+                    _installedSolutionsDock.LvInstalledSolutions.Groups.AddRange(
                         orgsAndSolutions
                             .Select(x => new ListViewGroup(x.Key.ConnectionName, x.Key.ConnectionName))
                             .ToArray());
@@ -139,7 +157,7 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                         var baseUrl = orgsAndSolution.Key.OriginalUrl.NormaliseUrl();
                         foreach (var solution in orgsAndSolution.Value)
                         {
-                            lvInstalledSolutions.Items.Add(new ListViewItem
+                            _installedSolutionsDock.LvInstalledSolutions.Items.Add(new ListViewItem
                             {
                                 Text = solution.GetAttributeValue<string>("friendlyname"),
                                 SubItems =
@@ -151,12 +169,12 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                                     solution.GetAttributeValue<DateTime>("installedon").ToLocalTime().ToString("d")
                                 },
                                 Tag = $"{baseUrl}main.aspx?etn=solution&id={solution.Id}&newWindow=true&pagetype=entityrecord",
-                                Group = lvInstalledSolutions.Groups[orgsAndSolution.Key.ConnectionName]
+                                Group = _installedSolutionsDock.LvInstalledSolutions.Groups[orgsAndSolution.Key.ConnectionName]
                             });
                         }
                     }
 
-                    lvInstalledSolutions.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
+                    _installedSolutionsDock.LvInstalledSolutions.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
                 },
                 ProgressChanged = e => { SetWorkingMessage(e.UserState.ToString()); }
             });
@@ -179,9 +197,9 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                     _ownerRepos.ToList().ForEach(r =>
                     {
                         var user = _gitHubClient.User.Get(r.Owner).Result;
-                        lvGitHubSolutions.AddGroup($"{user.Name} (@{user.Login})", user.Login);
+                        _solutionsDock.LvGitHubSolutions.AddGroup($"{user.Name} (@{user.Login})", user.Login);
                     });
-                    _lvGroups = lvGitHubSolutions.Groups.Cast<ListViewGroup>().ToList();
+                    RepoAuthorGroup = _solutionsDock.LvGitHubSolutions.Groups.Cast<ListViewGroup>().ToList();
 
                     var repos = new List<Repository>();
                     foreach (var ownerRepo in _ownerRepos)
@@ -209,7 +227,7 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                     }
                     EnableItems();
                     var repos = (List<Repository>) args.Result;
-                    _repos = repos.Select(r => new ListViewItem
+                    Repos = repos.Select(r => new ListViewItem
                     {
                         Text = r.Name,
                         SubItems =
@@ -219,23 +237,13 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                         },
                         ToolTipText = r.Description,
                         Tag = r,
-                        Group = lvGitHubSolutions.Groups[r.Owner.Login]
+                        Group = _solutionsDock.LvGitHubSolutions.Groups[r.Owner.Login]
                     }).ToArray();
-                    lvGitHubSolutions.Items.AddRange(_repos);
-                    //lvGitHubSolutions.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
+                    _solutionsDock.LvGitHubSolutions.Items.AddRange(Repos);
+                    _solutionsDock.LvGitHubSolutions.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
                 },
                 ProgressChanged = e => SetWorkingMessage(e.UserState.ToString())
             });
-        }
-
-        private void lvGitHubSolutions_ColumnClick(object sender, ColumnClickEventArgs e)
-        {
-            lvGitHubSolutions.Sort(e.Column);
-        }
-
-        private void lvInstalledSolutions_ColumnClick(object sender, ColumnClickEventArgs e)
-        {
-            lvInstalledSolutions.Sort(e.Column);
         }
 
         protected override void ConnectionDetailsUpdated(NotifyCollectionChangedEventArgs e)
@@ -264,16 +272,12 @@ namespace Ryr.XrmToolBox.SolutionInstaller
             AddAdditionalOrganization();
         }
 
-        private void SolutionInstallerPlugin_Load(object sender, EventArgs e)
+        protected override void OnConnectionUpdated(ConnectionUpdatedEventArgs e)
         {
+            base.OnConnectionUpdated(e);
+
             ConnectedOrgs.Add(ConnectionDetail);
             ExecuteMethod(LoadSolutionsInCRM);
-        }
-
-        private void lvGitHubSolutions_MouseDoubleClick(object sender, MouseEventArgs e)
-        {
-            var solutionListViewItemTest = ((ListView) sender).HitTest(e.X, e.Y);
-            Process.Start(((Repository)solutionListViewItemTest.Item.Tag).HtmlUrl);
         }
 
         private void tsbInstallSolution_Click(object sender, EventArgs e)
@@ -281,7 +285,7 @@ namespace Ryr.XrmToolBox.SolutionInstaller
             var connections = ConnectedOrgs
                 .Select(x => x.ConnectionName).ToArray();
 
-            var assets = lvReleases.CheckedItems
+            var assets = _releasesDock.LvReleases.CheckedItems
                 .Cast<ListViewItem>()
                 .Select(x => (Asset)x.Tag).ToList();
 
@@ -296,13 +300,14 @@ namespace Ryr.XrmToolBox.SolutionInstaller
         {
             var importErrors = new Dictionary<string, string>();
             var watch = new Stopwatch();
-            var selectedSolutions = lvReleases.GetCheckedItems();
+            var selectedSolutions = _releasesDock.LvReleases.GetCheckedItems();
             WorkAsync(new WorkAsyncInfo
             {
                 Message = "Downloading solution files from GitHub..",
                 IsCancelable = true,
                 Work = (worker, args) =>
                 {
+                    HideNotification();
                     watch.Start();
                     using (var webClient = new WebClient())
                     {
@@ -323,6 +328,14 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                                     $"Importing {s.Key} into {connectedOrg.ConnectionName}..");
                                 try
                                 {
+                                    var solutionFormat = Helper.CheckZip(s.Value);
+                                    if (solutionFormat != SolutionFormat.Managed)
+                                    {
+                                        importErrors.Add($"{s.Key}:{connectedOrg.ConnectionName}", 
+                                            $"SKIPPED Solution {s.Key} as it is {solutionFormat}. ");
+                                        continue;
+                                    };
+
                                     connectedOrg.ServiceClient.Execute(
                                         new ImportSolutionRequest
                                         {
@@ -353,7 +366,8 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                         ShowErrorNotification(args.Error.Message, null);
                         return;
                     }
-                    else if (importErrors.Any())
+
+                    if (importErrors.Any())
                     {
                         ShowErrorNotification(string.Join(Environment.NewLine, importErrors.Select(x=>x.Value).ToList()), null);
                         importErrors.Clear();
@@ -361,18 +375,12 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                     else
                     {
                         HideNotification();
-                        SendMessageToStatusBar?.Invoke(this, new StatusBarMessageEventArgs($"Imported {selectedSolutions.Length} solutions in {watch.Elapsed.Minutes:00}:{watch.Elapsed.Seconds:00}"));
+                        SendMessageToStatusBar?.Invoke(this, new StatusBarMessageEventArgs($"Imported {selectedSolutions.Length} solutions in {watch.Elapsed.Minutes:00} minute(s) {watch.Elapsed.Seconds:00} seconds"));
                     }
                     ExecuteMethod(LoadSolutionsInCRM);
                 },
                 ProgressChanged = e => { SetWorkingMessage(e.UserState.ToString()); }
             });
-        }
-
-        private void lvInstalledSolutions_MouseDoubleClick(object sender, MouseEventArgs e)
-        {
-            var installedSolutionListViewItemTest = ((ListView)sender).HitTest(e.X, e.Y);
-            Process.Start(installedSolutionListViewItemTest.Item.Tag.ToString());
         }
 
         private void tstGitHubKey_TextChanged(object sender, EventArgs e)
@@ -381,53 +389,6 @@ namespace Ryr.XrmToolBox.SolutionInstaller
             {
                 _gitHubClient.Credentials = new Credentials(tstGitHubKey.Text);
             }
-        }
-
-        private void txtSearch_KeyUp(object sender, KeyEventArgs e)
-        {
-            ListViewItem[] AddMissingGroups()
-            {
-                return _repos.Select(x =>
-                {
-                    var asset = x.Tag as Repository;
-                    if (x.Group == null)
-                    {
-                        x.Group = _lvGroups.FirstOrDefault(g => g.Name == asset.Owner.Login);
-                    }
-
-                    return x;
-                })
-                .ToArray();
-            }
-            var repoOrOwnerName = txtSearch.Text;
-            lvGitHubSolutions.BeginUpdate();
-            lvGitHubSolutions.Items.Clear();
-            lvGitHubSolutions.Groups.AddRange(_lvGroups.ToArray());
-            if (string.IsNullOrWhiteSpace(repoOrOwnerName))
-            {
-                lvGitHubSolutions.Items.AddRange(AddMissingGroups());
-            }
-            else
-            {
-                var filteredItems = _repos
-                .Where(item =>
-                {
-                    var repository = item.Tag as Repository;
-                    return repository.Owner.Login.IndexOf(repoOrOwnerName, StringComparison.CurrentCultureIgnoreCase) > -1
-                            || repository.Name.IndexOf(repoOrOwnerName, StringComparison.CurrentCultureIgnoreCase) > -1;
-                }).Select(x =>
-                {
-                    var repository = x.Tag as Repository;
-                    if (x.Group == null)
-                    {
-                        x.Group = _lvGroups.FirstOrDefault(g=>g.Name == repository.Owner.Login);
-                    }
-                    return x;
-                })
-                .ToArray();
-                lvGitHubSolutions.Items.AddRange(filteredItems);
-            }
-            lvGitHubSolutions.EndUpdate();
         }
 
         private void tsbUninstall_Click(object sender, EventArgs e)
@@ -445,18 +406,29 @@ namespace Ryr.XrmToolBox.SolutionInstaller
 
         public event EventHandler<MessageBusEventArgs> OnOutgoingMessage;
 
-        private void lvGitHubSolutions_ItemChecked(object sender, ItemCheckedEventArgs icea)
+        public void lvGitHubSolutions_ItemChecked(ListView lvGitHubSolutions, ItemCheckedEventArgs icea)
         {
             var lvGitHubSolutionsChecked = lvGitHubSolutions.GetCheckedItems();
-            var lvReleasesItems = lvReleases.GetItems();
-            scSolutionsAndFiles.Panel2Collapsed = lvGitHubSolutionsChecked.Length == 0;
+            var lvReleasesItems = _releasesDock.LvReleases.GetItems();
             if (lvGitHubSolutionsChecked.Length == 0 && lvReleasesItems.Length == 0) return;
-
+            if (!icea.Item.Checked)
+            {
+                var releases = (from s in lvGitHubSolutionsChecked
+                    let lvGitHubSolutionsTag = (Repository)s.Tag
+                    join r in lvReleasesItems on s.Text equals ((Asset)r.Tag).RepoName
+                    select r).ToList();
+                _releasesDock.LvReleases.RemoveItemsExcept(releases);
+                return;
+            }
             WorkAsync(new WorkAsyncInfo
             {
                 Message = $"Retrieving releases from GitHub..",
                 Work = (worker, args) =>
                 {
+                    if (!(mainDockPanel.ActiveDocument is GitHubReleasesDockContent))
+                    {
+                        _releasesDock.Activate();
+                    }
                     HideNotification();
                     var downloadableAssets = new List<Asset>();
                     var solutions = (from s in lvGitHubSolutionsChecked
@@ -467,11 +439,11 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                                      select (Repository)s.Tag).ToList();
                     solutions.ForEach(r =>
                     {
-                        if (lvReleases.GetGroups().Any(g => g.Name == r.Name)) return;
+                        if (_releasesDock.LvReleases.GetGroups().Any(g => g.Name == r.Name)) return;
 
-                        lvReleases.AddGroup(r.Name, r.Name);
+                        _releasesDock.LvReleases.AddGroup(r.Name, r.Name);
                     });
-                    _lvGroups = lvGitHubSolutions.GetGroups();
+                    RepoAuthorGroup = lvGitHubSolutions.GetGroups();
                     foreach (var repo in solutions)
                     {
                         var releases = new List<Release>();
@@ -515,11 +487,10 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                     {
                         ShowErrorNotification($"Rate Limit reached. Maximum number of requests per hour is {rateLimitException.Limit}. Please use your GitHub API key or try again after {rateLimitException.Reset.DateTime.ToLocalTime():t}.", new Uri("https://developer.github.com/v3/#rate-limiting"));
                         tslGitHubKey.Visible = true;
-                        tstGitHubKey.Visible = true;
                         return;
                     }
                     EnableItems();
-                    ShowInfoNotification("Install unmanaged and pre-release solutions with caution", null);
+                    ShowInfoNotification("Install pre-release solutions with caution", null);
                     var downloadableAssets = (List<Asset>)args.Result;
                     _releases = downloadableAssets.Select(asset => new ListViewItem
                     {
@@ -534,30 +505,24 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                         ToolTipText = asset.AssetBody,
                         Tag = asset,
                         ForeColor = asset.IsPreRelease ? Color.PaleVioletRed : Color.Black,
-                        Group = lvReleases.Groups[asset.RepoName]
+                        Group = _releasesDock.LvReleases.Groups[asset.RepoName]
                     }).ToArray();
-                    lvReleases.Items.AddRange(_releases);
-                    lvReleases.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
+                    _releasesDock.LvReleases.Items.AddRange(_releases);
+                    _releasesDock.LvReleases.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
                 },
                 ProgressChanged = e => SetWorkingMessage(e.UserState.ToString())
             });
         }
 
-        private void lvReleases_ItemChecked(object sender, ItemCheckedEventArgs e)
+        public void lvReleases_ItemChecked(int checkedItems)
         {
-            tsbInstallSolution.Enabled = lvReleases.CheckedItems.Count > 0;
-        }
-
-        private void lvReleases_MouseDoubleClick(object sender, MouseEventArgs e)
-        {
-            var solutionListViewItemTest = ((ListView)sender).HitTest(e.X, e.Y);
-            Process.Start(((Asset)solutionListViewItemTest.Item.Tag).BrowserDownloadUrl);
+            tsbInstallSolution.Enabled = checkedItems > 0;
         }
 
         private void tsbReset_Click(object sender, EventArgs e)
         {
-            lvGitHubSolutions.ClearCheckedItems();
-            lvReleases.ClearItems();
+            _solutionsDock.LvGitHubSolutions.ClearCheckedItems();
+            _releasesDock.LvReleases.ClearItems();
         }
     }
 }

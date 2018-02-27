@@ -125,7 +125,24 @@ namespace Ryr.XrmToolBox.SolutionInstaller.Extensions
             listview.SelectedItems.Clear();
             listview.Sorting = listview.Sorting == SortOrder.Ascending ? SortOrder.Descending : SortOrder.Ascending;
             listview.ListViewItemSorter = new ListViewItemComparer(columnClickedIndex, listview.Sorting);
-
+        }
+        public static void RemoveItemsExcept(this ListView listview, List<ListViewItem> items)
+        {
+            void MiRemoveItems()
+            {
+                listview.Items.Cast<ListViewItem>().ToList().ForEach(x =>
+                {
+                    if(!items.Contains(x)) x.Remove();
+                });
+            }
+            if (listview.InvokeRequired)
+            {
+                listview.Invoke((MethodInvoker)MiRemoveItems);
+            }
+            else
+            {
+                MiRemoveItems();
+            }
         }
     }
 }
