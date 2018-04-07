@@ -34,28 +34,18 @@ namespace Ryr.XrmToolBox.SolutionInstaller
         IGitHubPlugin, IPayPalPlugin,
         IHelpPlugin, IMessageBusHost,IStatusBarMessenger
     {
-        private List<OwnerRepo> _ownerRepos;
+        #region Public Properties
+        public string RepositoryName => "Solution-Installer-for-XrmToolBox";
+        public string UserName => "rajyraman";
+        public string DonationDescription => "Please sponsor my coffee, if you find this tool useful. Thank you.";
+        public string EmailAccount => "natraj.y@gmail.com";
+        public string HelpUrl => "https://github.com/rajyraman/Solution-Installer-for-XrmToolBox/blob/master/README.md";
+        public event EventHandler<StatusBarMessageEventArgs> SendMessageToStatusBar;
+        public event EventHandler<MessageBusEventArgs> OnOutgoingMessage;
+        #endregion
 
-        private const string SOLUTION_FETCH = @"
-                        <fetch distinct='false' no-lock='false' mapping='logical'>
-                          <entity name='solution'>
-                            <attribute name='friendlyname' />
-                            <attribute name='uniquename' />
-                            <attribute name='publisherid' />
-                            <attribute name='version' />
-                            <attribute name='installedon' />
-                            <attribute name='ismanaged' />
-                            <filter type='and'>
-                              <filter type='and'>
-                                <condition attribute='isvisible' operator='eq' value='1' />
-                              </filter>
-                            </filter>
-                            <order attribute='friendlyname' descending='false' />
-                          </entity>
-                        </fetch>";
-
+        #region Public Members
         public List<ConnectionDetail> ConnectedOrgs { get; }
-
         public SolutionInstallerPlugin()
         {
             InitializeComponent();
@@ -85,15 +75,37 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                 _gitHubClient.Credentials = new Credentials(tstGitHubKey.Text);
             }
         }
-
-        private readonly GitHubClient _gitHubClient;
         public ListViewItem[] Repos { get; set; }
         public List<ListViewGroup> RepoAuthorGroup { get; set; }
+        #endregion
+
+        #region Private Members
+        private List<OwnerRepo> _ownerRepos;
+        private const string SOLUTION_FETCH = @"
+                        <fetch distinct='false' no-lock='false' mapping='logical'>
+                          <entity name='solution'>
+                            <attribute name='friendlyname' />
+                            <attribute name='uniquename' />
+                            <attribute name='publisherid' />
+                            <attribute name='version' />
+                            <attribute name='installedon' />
+                            <attribute name='ismanaged' />
+                            <filter type='and'>
+                              <filter type='and'>
+                                <condition attribute='isvisible' operator='eq' value='1' />
+                              </filter>
+                            </filter>
+                            <order attribute='friendlyname' descending='false' />
+                          </entity>
+                        </fetch>";
+        private readonly GitHubClient _gitHubClient;
         private ListViewItem[] _releases;
         private GitHubSolutionsDockContent _solutionsDock;
         private GitHubReleasesDockContent _releasesDock;
-        private InstalledSolutionsDockContent _installedSolutionsDock;
+        private InstalledSolutionsDockContent _installedSolutionsDock; 
+        #endregion
 
+        #region Private Methods
         private void tsbClose_Click(object sender, EventArgs e)
         {
             SettingsManager.Instance.Save(typeof(SolutionInstallerPlugin), new Settings
@@ -147,7 +159,7 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                         ShowErrorNotification(args.Error.Message, null);
                         return;
                     }
-                    var orgsAndSolutions = (Dictionary<ConnectionDetail, List<Entity>>) args.Result;
+                    var orgsAndSolutions = (Dictionary<ConnectionDetail, List<Entity>>)args.Result;
                     _installedSolutionsDock.LvInstalledSolutions.Groups.AddRange(
                         orgsAndSolutions
                             .Select(x => new ListViewGroup(x.Key.ConnectionName, x.Key.ConnectionName))
@@ -188,11 +200,11 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                 Work = (worker, args) =>
                 {
                     HideNotification();
-                    var repoList =_gitHubClient.Repository.Content
+                    var repoList = _gitHubClient.Repository.Content
                         .GetAllContents("rajyraman", "Solution-Installer-for-XrmToolBox", "db.json").Result;
                     _ownerRepos = new JavaScriptSerializer()
                                     .Deserialize<List<OwnerRepo>>(repoList[0].Content);
-                    SendMessageToStatusBar?.Invoke(this, 
+                    SendMessageToStatusBar?.Invoke(this,
                         new StatusBarMessageEventArgs($"Retrieved {_ownerRepos.Count} solutions from GitHub"));
                     _ownerRepos.ToList().ForEach(r =>
                     {
@@ -203,7 +215,7 @@ namespace Ryr.XrmToolBox.SolutionInstaller
 
                     var repos = new List<Repository>();
                     foreach (var ownerRepo in _ownerRepos)
-                    {   
+                    {
                         foreach (var r in ownerRepo.Repos)
                         {
                             worker.ReportProgress(0, $"Retrieving information for {r} from GitHub..");
@@ -217,7 +229,7 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                 {
                     if (args.Error?.InnerException is RateLimitExceededException rateLimitException)
                     {
-                        ShowErrorNotification($"Rate Limit reached. Maximum number of requests per hour is {rateLimitException.Limit}. Please use your GitHub API key or try again after {rateLimitException.Reset.DateTime.ToLocalTime():t}.", new Uri("https://developer.github.com/v3/#rate-limiting"));
+                        HandleRateLimitException(rateLimitException);
                         return;
                     }
                     else if (args.Error != null)
@@ -226,7 +238,7 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                         return;
                     }
                     EnableItems();
-                    var repos = (List<Repository>) args.Result;
+                    var repos = (List<Repository>)args.Result;
                     Repos = repos.Select(r => new ListViewItem
                     {
                         Text = r.Name,
@@ -246,38 +258,20 @@ namespace Ryr.XrmToolBox.SolutionInstaller
             });
         }
 
-        protected override void ConnectionDetailsUpdated(NotifyCollectionChangedEventArgs e)
+        private void HandleRateLimitException(RateLimitExceededException rateLimitExceededException)
         {
-            if (e.Action != NotifyCollectionChangedAction.Add) return;
-
-            var newConnections = (from c in e.NewItems.Cast<ConnectionDetail>()
-                where ConnectedOrgs.All(x => x.ConnectionId != c.ConnectionId)
-                select c).ToList();
-            if (!newConnections.Any()) return;
-
-            ConnectedOrgs.AddRange(newConnections);
-            ExecuteMethod(LoadSolutionsInCRM);
+            ShowErrorNotification(
+                $"Rate Limit reached. Maximum number of requests per hour is {rateLimitExceededException.Limit}. Please use your GitHub API key or try again after {rateLimitExceededException.Reset.DateTime.ToLocalTime():t}.",
+                new Uri("https://developer.github.com/v3/#rate-limiting"));
+            tslGitHubKey.Visible = true;
+            tstGitHubKey.Visible = true;
+            tssEnd.Visible = true;
+            tstGitHubKey.Focus();
         }
-
-        public string RepositoryName => "Solution-Installer-for-XrmToolBox";
-        public string UserName => "rajyraman";
-        public string DonationDescription => "Please sponsor my coffee, if you find this tool useful. Thank you.";
-        public string EmailAccount => "natraj.y@gmail.com";
-        public string HelpUrl => "https://github.com/rajyraman/Solution-Installer-for-XrmToolBox/blob/master/README.md";
-
-        public event EventHandler<StatusBarMessageEventArgs> SendMessageToStatusBar;
 
         private void tsbAddOrg_Click(object sender, EventArgs e)
         {
             AddAdditionalOrganization();
-        }
-
-        protected override void OnConnectionUpdated(ConnectionUpdatedEventArgs e)
-        {
-            base.OnConnectionUpdated(e);
-
-            ConnectedOrgs.Add(ConnectionDetail);
-            ExecuteMethod(LoadSolutionsInCRM);
         }
 
         private void tsbInstallSolution_Click(object sender, EventArgs e)
@@ -289,7 +283,7 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                 .Cast<ListViewItem>()
                 .Select(x => (Asset)x.Tag).ToList();
 
-            if (DialogResult.OK == 
+            if (DialogResult.OK ==
                 new InstallSolution(connections, assets).ShowDialog(this))
             {
                 ExecuteMethod(PublishSolutions);
@@ -314,7 +308,7 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                         var solutionFiles = selectedSolutions
                             .Select(x =>
                             {
-                                var asset = (Asset) x.Tag;
+                                var asset = (Asset)x.Tag;
                                 worker.ReportProgress(0, $"Downloading {asset.Name} from GitHub..");
                                 return new KeyValuePair<string, byte[]>(asset.Name,
                                     webClient.DownloadData(asset.BrowserDownloadUrl));
@@ -331,7 +325,7 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                                     var solutionFormat = Helper.CheckZip(s.Value);
                                     if (solutionFormat != SolutionFormat.Managed)
                                     {
-                                        importErrors.Add($"{s.Key}:{connectedOrg.ConnectionName}", 
+                                        importErrors.Add($"{s.Key}:{connectedOrg.ConnectionName}",
                                             $"SKIPPED Solution {s.Key} as it is {solutionFormat}. ");
                                         continue;
                                     };
@@ -347,9 +341,9 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                                 {
                                     importErrors.Add($"{s.Key}:{connectedOrg.ConnectionName}",
                                         $"Org {connectedOrg.ConnectionName}, Solution {s.Key}. " +
-                                        $@"{ex?.Detail?.InnerFault?.InnerFault?.Message 
-                                               ?? ex?.Detail?.InnerFault?.Message 
-                                               ?? ex?.Detail?.Message 
+                                        $@"{ex?.Detail?.InnerFault?.InnerFault?.Message
+                                               ?? ex?.Detail?.InnerFault?.Message
+                                               ?? ex?.Detail?.Message
                                                ?? ex?.Message}");
                                 }
                             }
@@ -369,13 +363,15 @@ namespace Ryr.XrmToolBox.SolutionInstaller
 
                     if (importErrors.Any())
                     {
-                        ShowErrorNotification(string.Join(Environment.NewLine, importErrors.Select(x=>x.Value).ToList()), null);
+                        ShowErrorNotification(string.Join(Environment.NewLine, importErrors.Select(x => x.Value).ToList()), null);
                         importErrors.Clear();
                     }
                     else
                     {
                         HideNotification();
                         SendMessageToStatusBar?.Invoke(this, new StatusBarMessageEventArgs($"Imported {selectedSolutions.Length} solutions in {watch.Elapsed.Minutes:00} minute(s) {watch.Elapsed.Seconds:00} seconds"));
+                        _installedSolutionsDock.Activate();
+                        _solutionsDock.LvGitHubSolutions.ClearCheckedItems();
                     }
                     ExecuteMethod(LoadSolutionsInCRM);
                 },
@@ -397,14 +393,42 @@ namespace Ryr.XrmToolBox.SolutionInstaller
             OnOutgoingMessage?.Invoke(this, messageBusEventArgs);
         }
 
+        private void tsbReset_Click(object sender, EventArgs e)
+        {
+            _solutionsDock.LvGitHubSolutions.ClearCheckedItems();
+            _releasesDock.LvReleases.ClearItems();
+        }
+        #endregion
+
+        #region Protected Methods
+        protected override void ConnectionDetailsUpdated(NotifyCollectionChangedEventArgs e)
+        {
+            if (e.Action != NotifyCollectionChangedAction.Add) return;
+
+            var newConnections = (from c in e.NewItems.Cast<ConnectionDetail>()
+                                  where ConnectedOrgs.All(x => x.ConnectionId != c.ConnectionId)
+                                  select c).ToList();
+            if (!newConnections.Any()) return;
+
+            ConnectedOrgs.AddRange(newConnections);
+            ExecuteMethod(LoadSolutionsInCRM);
+        }
+        protected override void OnConnectionUpdated(ConnectionUpdatedEventArgs e)
+        {
+            base.OnConnectionUpdated(e);
+
+            ConnectedOrgs.Add(ConnectionDetail);
+            ExecuteMethod(LoadSolutionsInCRM);
+        } 
+        #endregion
+
+        #region Public Methods
         public void OnIncomingMessage(MessageBusEventArgs message)
         {
             if (message.SourcePlugin != "Managed Solution Deletion Tool") return;
 
             ExecuteMethod(LoadSolutionsInCRM);
         }
-
-        public event EventHandler<MessageBusEventArgs> OnOutgoingMessage;
 
         public void lvGitHubSolutions_ItemChecked(ListView lvGitHubSolutions, ItemCheckedEventArgs icea)
         {
@@ -414,9 +438,9 @@ namespace Ryr.XrmToolBox.SolutionInstaller
             if (!icea.Item.Checked)
             {
                 var releases = (from s in lvGitHubSolutionsChecked
-                    let lvGitHubSolutionsTag = (Repository)s.Tag
-                    join r in lvReleasesItems on s.Text equals ((Asset)r.Tag).RepoName
-                    select r).ToList();
+                                let lvGitHubSolutionsTag = (Repository)s.Tag
+                                join r in lvReleasesItems on s.Text equals ((Asset)r.Tag).RepoName
+                                select r).ToList();
                 _releasesDock.LvReleases.RemoveItemsExcept(releases);
                 return;
             }
@@ -485,8 +509,7 @@ namespace Ryr.XrmToolBox.SolutionInstaller
                 {
                     if (args.Error?.InnerException is RateLimitExceededException rateLimitException)
                     {
-                        ShowErrorNotification($"Rate Limit reached. Maximum number of requests per hour is {rateLimitException.Limit}. Please use your GitHub API key or try again after {rateLimitException.Reset.DateTime.ToLocalTime():t}.", new Uri("https://developer.github.com/v3/#rate-limiting"));
-                        tslGitHubKey.Visible = true;
+                        HandleRateLimitException(rateLimitException);
                         return;
                     }
                     EnableItems();
@@ -517,12 +540,7 @@ namespace Ryr.XrmToolBox.SolutionInstaller
         public void lvReleases_ItemChecked(int checkedItems)
         {
             tsbInstallSolution.Enabled = checkedItems > 0;
-        }
-
-        private void tsbReset_Click(object sender, EventArgs e)
-        {
-            _solutionsDock.LvGitHubSolutions.ClearCheckedItems();
-            _releasesDock.LvReleases.ClearItems();
-        }
+        } 
+        #endregion
     }
 }

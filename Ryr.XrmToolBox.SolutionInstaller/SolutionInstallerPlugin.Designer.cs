@@ -44,7 +44,7 @@
             this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
             this.tslGitHubKey = new System.Windows.Forms.ToolStripLabel();
             this.tstGitHubKey = new System.Windows.Forms.ToolStripTextBox();
-            this.toolStripSeparator5 = new System.Windows.Forms.ToolStripSeparator();
+            this.tssEnd = new System.Windows.Forms.ToolStripSeparator();
             this.backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
             this.mainDockPanel = new WeifenLuo.WinFormsUI.Docking.DockPanel();
             this.toolStripMenu.SuspendLayout();
@@ -67,7 +67,7 @@
             this.toolStripSeparator6,
             this.tslGitHubKey,
             this.tstGitHubKey,
-            this.toolStripSeparator5});
+            this.tssEnd});
             this.toolStripMenu.Location = new System.Drawing.Point(0, 0);
             this.toolStripMenu.Name = "toolStripMenu";
             this.toolStripMenu.Padding = new System.Windows.Forms.Padding(0, 0, 3, 0);
@@ -169,6 +169,7 @@
             // tstGitHubKey
             // 
             this.tstGitHubKey.BackColor = System.Drawing.SystemColors.Window;
+            this.tstGitHubKey.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.tstGitHubKey.Name = "tstGitHubKey";
             this.tstGitHubKey.Size = new System.Drawing.Size(410, 48);
             this.tstGitHubKey.ToolTipText = "Enter a GitHub API Key, if you have one. Calls might be throttled, if you don\'t h" +
@@ -176,10 +177,11 @@
             this.tstGitHubKey.Visible = false;
             this.tstGitHubKey.TextChanged += new System.EventHandler(this.tstGitHubKey_TextChanged);
             // 
-            // toolStripSeparator5
+            // tssEnd
             // 
-            this.toolStripSeparator5.Name = "toolStripSeparator5";
-            this.toolStripSeparator5.Size = new System.Drawing.Size(6, 48);
+            this.tssEnd.Name = "tssEnd";
+            this.tssEnd.Size = new System.Drawing.Size(6, 48);
+            this.tssEnd.Visible = false;
             // 
             // mainDockPanel
             // 
@@ -223,7 +225,7 @@
         private System.Windows.Forms.ToolStripTextBox tstGitHubKey;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;
         private System.Windows.Forms.ToolStripButton tsbUninstall;
-        private System.Windows.Forms.ToolStripSeparator toolStripSeparator5;
+        private System.Windows.Forms.ToolStripSeparator tssEnd;
         private System.ComponentModel.BackgroundWorker backgroundWorker1;
         private System.Windows.Forms.ToolStripButton tsbReset;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator6;

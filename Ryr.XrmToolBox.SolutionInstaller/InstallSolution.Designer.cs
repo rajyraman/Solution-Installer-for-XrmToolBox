@@ -51,7 +51,7 @@
             this.groupBox1.Font = new System.Drawing.Font("Segoe UI", 8.1F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.groupBox1.Location = new System.Drawing.Point(12, 12);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(1643, 1092);
+            this.groupBox1.Size = new System.Drawing.Size(1957, 1369);
             this.groupBox1.TabIndex = 0;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Install Solutions";
@@ -69,7 +69,7 @@
             this.flowLayoutPanel1.FlowDirection = System.Windows.Forms.FlowDirection.TopDown;
             this.flowLayoutPanel1.Location = new System.Drawing.Point(3, 39);
             this.flowLayoutPanel1.Name = "flowLayoutPanel1";
-            this.flowLayoutPanel1.Size = new System.Drawing.Size(1637, 1050);
+            this.flowLayoutPanel1.Size = new System.Drawing.Size(1951, 1327);
             this.flowLayoutPanel1.TabIndex = 1;
             // 
             // lblWarning
@@ -99,7 +99,7 @@
             this.lbConnections.ItemHeight = 37;
             this.lbConnections.Location = new System.Drawing.Point(3, 82);
             this.lbConnections.Name = "lbConnections";
-            this.lbConnections.Size = new System.Drawing.Size(857, 78);
+            this.lbConnections.Size = new System.Drawing.Size(1120, 78);
             this.lbConnections.TabIndex = 6;
             // 
             // label2
@@ -118,7 +118,7 @@
             this.lbSolutions.ItemHeight = 37;
             this.lbSolutions.Location = new System.Drawing.Point(3, 204);
             this.lbSolutions.Name = "lbSolutions";
-            this.lbSolutions.Size = new System.Drawing.Size(857, 189);
+            this.lbSolutions.Size = new System.Drawing.Size(1120, 189);
             this.lbSolutions.TabIndex = 5;
             this.lbSolutions.SelectedIndexChanged += new System.EventHandler(this.lbSolutions_SelectedIndexChanged);
             // 
@@ -137,7 +137,7 @@
             this.txtReleaseNotes.Location = new System.Drawing.Point(3, 437);
             this.txtReleaseNotes.Name = "txtReleaseNotes";
             this.txtReleaseNotes.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.Vertical;
-            this.txtReleaseNotes.Size = new System.Drawing.Size(1618, 584);
+            this.txtReleaseNotes.Size = new System.Drawing.Size(1945, 887);
             this.txtReleaseNotes.TabIndex = 3;
             this.txtReleaseNotes.Text = "";
             // 
@@ -153,7 +153,7 @@
             // installButton
             // 
             this.installButton.DialogResult = System.Windows.Forms.DialogResult.OK;
-            this.installButton.Location = new System.Drawing.Point(1189, 1122);
+            this.installButton.Location = new System.Drawing.Point(1504, 1412);
             this.installButton.Name = "installButton";
             this.installButton.Size = new System.Drawing.Size(275, 54);
             this.installButton.TabIndex = 1;
@@ -163,7 +163,7 @@
             // cancelButton
             // 
             this.cancelButton.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.cancelButton.Location = new System.Drawing.Point(1486, 1122);
+            this.cancelButton.Location = new System.Drawing.Point(1797, 1412);
             this.cancelButton.Name = "cancelButton";
             this.cancelButton.Size = new System.Drawing.Size(169, 53);
             this.cancelButton.TabIndex = 2;
@@ -175,11 +175,12 @@
             this.AcceptButton = this.installButton;
             this.AutoScaleDimensions = new System.Drawing.SizeF(16F, 31F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.AutoSize = true;
             this.CancelButton = this.cancelButton;
-            this.ClientSize = new System.Drawing.Size(1672, 1210);
-            this.Controls.Add(this.cancelButton);
+            this.ClientSize = new System.Drawing.Size(1981, 1495);
             this.Controls.Add(this.installButton);
             this.Controls.Add(this.groupBox1);
+            this.Controls.Add(this.cancelButton);
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "InstallSolution";
