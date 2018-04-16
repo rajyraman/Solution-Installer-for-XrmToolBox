@@ -17,6 +17,9 @@
 	"owner" : "mscrmtools",
 	"repos" : ["ApplicationParameters"]
 }, {
+	"owner" : "paulnieuwelaar",
+	"repos" : ["alertjs"]
+}, {
 	"owner" : "rajyraman",
 	"repos" : ["Personal-View-to-System-View"]
 }, {
