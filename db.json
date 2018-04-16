@@ -26,6 +26,9 @@
 	"owner" : "rtebar",
 	"repos" : ["dynamics-custom-emails"]
 }, {
+	"owner" : "seanmcne",
+	"repos" : ["OrgDbOrgSettings"]
+}, {
 	"owner" : "scottdurow",
 	"repos" : ["NetworkView", "RibbonWorkbench"]
 }]
