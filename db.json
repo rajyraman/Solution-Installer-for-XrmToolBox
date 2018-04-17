@@ -8,6 +8,9 @@
 	"owner" : "demianrasko",
 	"repos" : ["Dynamics-365-Workflow-Tools"]
 }, {
+	"owner" : "digitalflow",
+	"repos" : ["Xrm-Quick-Edit"]
+}, {
 	"owner" : "jlattimer",
 	"repos" : ["CRMCodeEditor", "CRM-Email-Workflow-Utilities", "CRM-DateTime-Workflow-Utilities", "CRM-Note-Workflow-Utilities", "CRM-Numeric-Workflow-Utilities", "CRMRESTBuilder"]
 }, {
