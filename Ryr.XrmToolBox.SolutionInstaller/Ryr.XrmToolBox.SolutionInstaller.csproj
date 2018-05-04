@@ -30,13 +30,11 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="McTools.Xrm.Connection, Version=1.2017.10.15, Culture=neutral, PublicKeyToken=96037217801d9658, processorArchitecture=MSIL">
-      <HintPath>..\packages\MscrmTools.Xrm.Connection.1.2017.10.15\lib\net462\McTools.Xrm.Connection.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="McTools.Xrm.Connection, Version=1.2018.4.16, Culture=neutral, PublicKeyToken=96037217801d9658, processorArchitecture=MSIL">
+      <HintPath>..\packages\MscrmTools.Xrm.Connection.1.2018.4.16\lib\net462\McTools.Xrm.Connection.dll</HintPath>
     </Reference>
-    <Reference Include="McTools.Xrm.Connection.WinForms, Version=1.2017.10.15, Culture=neutral, PublicKeyToken=f1559f79cf894e27, processorArchitecture=MSIL">
-      <HintPath>..\packages\MscrmTools.Xrm.Connection.1.2017.10.15\lib\net462\McTools.Xrm.Connection.WinForms.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="McTools.Xrm.Connection.WinForms, Version=1.2018.4.16, Culture=neutral, PublicKeyToken=f1559f79cf894e27, processorArchitecture=MSIL">
+      <HintPath>..\packages\MscrmTools.Xrm.Connection.1.2018.4.16\lib\net462\McTools.Xrm.Connection.WinForms.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Crm.Sdk.Proxy, Version=9.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.CrmSdk.CoreAssemblies.9.0.0.5\lib\net452\Microsoft.Crm.Sdk.Proxy.dll</HintPath>
@@ -79,9 +77,8 @@
       <HintPath>..\packages\NuGet.Core.2.12.0\lib\net40-Client\NuGet.Core.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Octokit, Version=0.28.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Octokit.0.28.0\lib\net45\Octokit.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Octokit, Version=0.29.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Octokit.0.29.0\lib\net45\Octokit.dll</HintPath>
     </Reference>
     <Reference Include="PresentationFramework" />
     <Reference Include="System" />
@@ -117,17 +114,14 @@
     <Reference Include="WeifenLuo.WinFormsUI.Docking.ThemeVS2015, Version=3.0.4.0, Culture=neutral, PublicKeyToken=5cded1a1a0a7b481, processorArchitecture=MSIL">
       <HintPath>..\packages\DockPanelSuite.ThemeVS2015.3.0.4\lib\net40\WeifenLuo.WinFormsUI.Docking.ThemeVS2015.dll</HintPath>
     </Reference>
-    <Reference Include="XrmToolBox, Version=1.2018.1.20, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\XrmToolBoxPackage.1.2018.1.20\lib\net462\XrmToolBox.exe</HintPath>
-      <Private>True</Private>
+    <Reference Include="XrmToolBox, Version=1.2018.4.22, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\XrmToolBoxPackage.1.2018.4.22\lib\net462\XrmToolBox.exe</HintPath>
     </Reference>
     <Reference Include="XrmToolBox.Extensibility, Version=1.2017.7.10, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\XrmToolBoxPackage.1.2018.1.20\lib\net462\XrmToolBox.Extensibility.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\XrmToolBoxPackage.1.2018.4.22\lib\net462\XrmToolBox.Extensibility.dll</HintPath>
     </Reference>
     <Reference Include="XrmToolBox.PluginsStore, Version=1.2017.10.7, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\XrmToolBoxPackage.1.2018.1.20\lib\net462\XrmToolBox.PluginsStore.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\XrmToolBoxPackage.1.2018.4.22\lib\net462\XrmToolBox.PluginsStore.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -199,9 +193,10 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>if $(ConfigurationName) == Debug (
-  IF NOT EXIST Plugins mkdir Plugins
-  move /Y Ryr*.dll Plugins
+    <PostBuildEvent>"$(SolutionDir)\packages\LibZ.Tool.1.2.0.0\tools\libz" inject-dll -a Ryr.XrmToolBox.SolutionInstaller.dll -i Octokit.dll
+if $(ConfigurationName) == Debug (
+IF NOT EXIST Plugins mkdir Plugins 
+move /Y Ryr*.dll Plugins
 )</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
