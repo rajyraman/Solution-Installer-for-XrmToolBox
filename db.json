@@ -15,7 +15,7 @@
 	"repos" : ["Xrm-Quick-Edit"]
 }, {
 	"owner" : "jlattimer",
-	"repos" : ["CRMCodeEditor", "CRM-Email-Workflow-Utilities", "CRM-DateTime-Workflow-Utilities", "CRM-Note-Workflow-Utilities", "CRM-Numeric-Workflow-Utilities", "CRMRESTBuilder"]
+	"repos" : ["CRMCodeEditor", "CRM-Email-Workflow-Utilities", "CRM-DateTime-Workflow-Utilities", "CRM-Note-Workflow-Utilities", "CRM-Numeric-Workflow-Utilities", "CRM-String-Workflow-Utilities", "CRMRESTBuilder"]
 }, {
 	"owner" : "lucasalexander",
 	"repos" : ["AlexanderDevelopment.ProcessRunner"]
