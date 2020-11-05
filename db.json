@@ -36,5 +36,5 @@
 	"repos" : ["OrgDbOrgSettings"]
 }, {
 	"owner" : "scottdurow",
-	"repos" : ["NetworkView", "RibbonWorkbench"]
+	"repos" : ["NetworkView", "NetworkViewPCF", "RibbonWorkbench"]
 }]
