@@ -37,4 +37,7 @@
 }, {
 	"owner" : "scottdurow",
 	"repos" : ["NetworkView", "NetworkViewPCF", "RibbonWorkbench"]
+}, {
+	"owner" : "drivardxrm",
+	"repos" : ["Dataverse-CustomApis"]
 }]
